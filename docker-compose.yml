@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  firestore:
+    build:
+      context: infra/firestore
+    environment:
+      FIRESTORE_PROJECT_ID: workflow-platform-dev
+    ports: ["8080:8080"]
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ── HTTP Services ────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: services/auth-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    ports: ["8001:8000"]
+    depends_on: [redis, firestore]
+
+  tenant-user-service:
+    build:
+      context: services/tenant-user-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    ports: ["8002:8000"]
+    depends_on: [redis, firestore]
+
+  workflow-service:
+    build:
+      context: services/workflow-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    ports: ["8003:8000"]
+    depends_on: [redis, firestore]
+
+  notification-service:
+    build:
+      context: services/notification-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    ports: ["8004:8000"]
+    depends_on: [redis, firestore, mailhog]
+
+  audit-service:
+    build:
+      context: services/audit-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    ports: ["8005:8000"]
+    depends_on: [redis, firestore]
+
+  # ── Background Workers ───────────────────────────────────────
+
+  outbox-relay:
+    build:
+      context: services/outbox-relay
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    depends_on: [redis, firestore]
+
+  worker-service:
+    build:
+      context: services/worker-service
+      additional_contexts:
+        shared: shared
+    env_file: .env
+    depends_on: [redis, mailhog]
+
+  # ── Frontend (placeholder) ───────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+    ports: ["3000:3000"]
