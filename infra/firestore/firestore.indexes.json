@@ -1,4 +1,38 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "email", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "verification_tokens",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "token_hash", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "refresh_hash", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "revoked", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "family", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "password_reset_tokens",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "token_hash", "order": "ASCENDING" }]
+    }
+  ],
   "fieldOverrides": []
 }

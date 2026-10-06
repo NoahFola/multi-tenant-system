@@ -2,6 +2,9 @@
 # Starts only the Firestore emulator, bound to 0.0.0.0 so other containers can reach it.
 FROM node:20-alpine
 
+# Install Java JRE (required for Firestore emulator JAR, Java 21+ is now required by firebase-tools)
+RUN apk add --no-cache openjdk21-jre
+
 # Install the Firebase CLI globally
 RUN npm install -g firebase-tools
 

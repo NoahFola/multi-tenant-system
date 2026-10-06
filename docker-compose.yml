@@ -92,3 +92,18 @@ services:
     build:
       context: ./frontend
     ports: ["3000:3000"]
+
+  # ── Tools & Utilities ────────────────────────────────────────
+
+  docs-generator:
+    image: python:3.12-slim
+    profiles: ["tools"]
+    volumes:
+      - ./docs:/docs
+    depends_on:
+      - auth-service
+      - tenant-user-service
+    command: >
+      bash -c "
+      pip install requests pyyaml &&
+      python -c \"import requests, json, yaml; print('Fetching OpenAPI schema from auth-service...'); res1 = requests.get('http://auth-service:8000/openapi.json'); schema = res1.json(); print('Fetching OpenAPI schema from tenant-user-service...'); res2 = requests.get('http://tenant-user-service:8000/openapi.json'); tenant_schema = res2.json(); schema.setdefault('paths', {}).update(tenant_schema.get('paths', {})); schema.setdefault('components', {}).setdefault('schemas', {}).update(tenant_schema.get('components', {}).get('schemas', {})); schema['info']['title'] = 'Multi-Tenant Workflow Platform API'; f1 = open('/docs/openapi.json', 'w'); json.dump(schema, f1, indent=2); f1.close(); f2 = open('/docs/openapi.yaml', 'w'); yaml.dump(schema, f2, sort_keys=False); f2.close(); print('✅ Saved to docs/openapi.json and docs/openapi.yaml')\""

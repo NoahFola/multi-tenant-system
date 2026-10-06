@@ -6,7 +6,8 @@ COPY --from=shared . /shared
 RUN pip install --no-cache-dir /shared
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[test]"
 
 COPY app ./app
+COPY tests ./tests
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
