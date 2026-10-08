@@ -1,8 +1,11 @@
-from functools import lru_cache
+from fastapi import Depends
 from common.firestore_client import get_db
+from common.redis_client import get_redis
 from app.core.email import SmtpEmailSender
 from app.services.auth_service import AuthService
 
-@lru_cache
-def get_auth_service() -> AuthService:
-    return AuthService(db=get_db(), email=SmtpEmailSender())
+def get_auth_service(
+    db=Depends(get_db),
+    redis=Depends(get_redis)
+) -> AuthService:
+    return AuthService(db=db, email=SmtpEmailSender(), redis=redis)

@@ -11,6 +11,7 @@ class Permission:
     USER_LIST        = "user:list"
     USER_ROLE_CHANGE = "user:role_change"
     USER_DISABLE     = "user:disable"
+    AUDIT_READ       = "audit:read"
 
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "employee": [Permission.WORKFLOW_SUBMIT],
@@ -19,7 +20,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     "admin":    [Permission.WORKFLOW_SUBMIT, Permission.WORKFLOW_REVIEW,
                  Permission.WORKFLOW_APPROVE, Permission.WORKFLOW_REJECT,
                  Permission.USER_INVITE, Permission.USER_LIST,
-                 Permission.USER_ROLE_CHANGE, Permission.USER_DISABLE],
+                 Permission.USER_ROLE_CHANGE, Permission.USER_DISABLE,
+                 Permission.AUDIT_READ],
 }
 
 def require_permission(permission: str):

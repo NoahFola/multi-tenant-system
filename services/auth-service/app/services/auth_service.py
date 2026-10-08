@@ -17,11 +17,13 @@ from app.core.sessions import (
     revoke_family, revoke_all_sessions_for_user
 )
 from app.core.email_protocol import EmailSender
+from common.events import emit_audit_event
 
 class AuthService:
-    def __init__(self, db: firestore.Client, email: EmailSender):
+    def __init__(self, db: firestore.Client, email: EmailSender, redis=None):
         self.db = db
         self.email = email
+        self.redis = redis
 
     def register(self, req: RegisterRequest) -> RegisterResponse:
         email = req.email.lower()
@@ -43,13 +45,30 @@ class AuthService:
         
         return RegisterResponse(uid=uid, message="Verification email sent")
 
-    def login(self, req: LoginRequest) -> TokenResponse:
+    def login(self, req: LoginRequest, ip: str = "") -> TokenResponse:
         user = get_user_by_email(self.db, req.email.lower())
         
         if not user or not verify_password(req.password, user["password_hash"]):
+            if user:
+                emit_audit_event(
+                    self.redis, tenant_id=user["tenant_id"], actor_id=user["uid"],
+                    action="user.login_failed", resource_type="user", resource_id=user["uid"],
+                    metadata={"reason": "invalid_password"}, ip=ip, success=False
+                )
+            else:
+                emit_audit_event(
+                    self.redis, tenant_id="SYSTEM", actor_id="SYSTEM",
+                    action="user.login_failed", resource_type="user", resource_id="UNKNOWN",
+                    metadata={"reason": "user_not_found", "email": req.email.lower()}, ip=ip, success=False
+                )
             raise UnauthorizedError("Invalid email or password")
             
         if not user.get("is_verified", False):
+            emit_audit_event(
+                self.redis, tenant_id=user["tenant_id"], actor_id=user["uid"],
+                action="user.login_failed", resource_type="user", resource_id=user["uid"],
+                metadata={"reason": "unverified_email"}, ip=ip, success=False
+            )
             raise ForbiddenError("Email not verified")
             
         raw_refresh = create_refresh_token()
@@ -62,6 +81,12 @@ class AuthService:
             user["uid"], user["email"],
             tenant_id=user["tenant_id"],
             role=role_name
+        )
+        
+        emit_audit_event(
+            self.redis, tenant_id=user["tenant_id"], actor_id=user["uid"],
+            action="user.login", resource_type="user", resource_id=user["uid"],
+            metadata={}, ip=ip, success=True
         )
         
         return TokenResponse(access_token=access, refresh_token=raw_refresh)
@@ -138,6 +163,13 @@ class AuthService:
         
         # Revoke all sessions
         revoke_all_sessions_for_user(self.db, token["uid"])
+        
+        user = get_user_by_id(self.db, token["uid"])
+        emit_audit_event(
+            self.redis, tenant_id=user["tenant_id"], actor_id=user["uid"],
+            action="user.password_reset", resource_type="user", resource_id=user["uid"],
+            metadata={}, ip="", success=True
+        )
         
         return {"message": "Password updated successfully"}
 

@@ -47,7 +47,7 @@ class TenantUserService:
         update_user_role(self.db, tenant_id, user_id, new_role_id)
         
         # 4. emit_audit_event
-        emit_audit_event(self.db, tenant_id, actor_id,
+        emit_audit_event(self.redis, tenant_id, actor_id,
             action="user.role_changed", resource_type="user",
             resource_id=user_id,
             metadata={"old_role_id": old_role, "new_role_id": new_role_id}, ip=ip)
@@ -67,8 +67,8 @@ class TenantUserService:
         disable_user(self.db, tenant_id, user_id)
         
         # 3. revoke_all_sessions_for_user() in Firestore
-        from shared.common.sessions import revoke_all_sessions_for_user # Assuming it's there or will be
         try:
+            from common.sessions import revoke_all_sessions_for_user # Assuming it's there or will be
             revoke_all_sessions_for_user(self.db, user_id)
         except ImportError:
             pass # Stub if not exists in tenant-user-service yet
@@ -77,7 +77,7 @@ class TenantUserService:
         self.redis.setex(f"disabled:{user_id}", settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, "1")
         
         # 5. emit_audit_event
-        emit_audit_event(self.db, tenant_id, actor_id,
+        emit_audit_event(self.redis, tenant_id, actor_id,
             action="user.disabled", resource_type="user",
             resource_id=user_id, metadata={}, ip=ip)
             
@@ -119,7 +119,7 @@ class TenantUserService:
         self.email.send_invitation_email(email, raw_token)
         
         # 8. emit_audit_event
-        emit_audit_event(self.db, tenant_id, invited_by,
+        emit_audit_event(self.redis, tenant_id, invited_by,
             action="user.invited", resource_type="invitation",
             resource_id=invitation_id,
             metadata={"email": email, "role_id": role_id}, ip=ip)
