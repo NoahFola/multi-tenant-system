@@ -1,5 +1,6 @@
 import os
 import pytest
+import redis as redis_lib
 from dotenv import load_dotenv
 from google.cloud import firestore
 from app.services.auth_service import AuthService
@@ -25,8 +26,15 @@ def db():
     client.close()
 
 @pytest.fixture(scope="module")
-def svc(db):
-    return AuthService(db=db, email=SmtpEmailSender())
+def redis_client():
+    url = os.environ.get("TEST_REDIS_URL", "redis://redis:6379/0")
+    client = redis_lib.from_url(url, decode_responses=True)
+    yield client
+    client.close()
+
+@pytest.fixture(scope="module")
+def svc(db, redis_client):
+    return AuthService(db=db, email=SmtpEmailSender(), redis=redis_client)
 
 @pytest.fixture(scope="module", autouse=True)
 def cleanup(db):
